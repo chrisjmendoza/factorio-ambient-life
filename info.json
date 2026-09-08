@@ -1,0 +1,14 @@
+{
+    "name": "AmbientLife",
+    "version": "0.1.1",
+    "factorio_version": "2.0",
+    "dependencies": [
+        "base >= 2.0",
+        "? space-age"
+    ],
+    "title": "Ambient Life",
+    "author": "chrisjmendoza",
+    "contact": "chrisjmendoza@gmail.com",
+    "homepage": "",
+    "description": "Birds, butterflies and fireflies appear where the land is healthy. Wildlife density follows the trees and the pollution around you, so a thriving forest hums with life and a smog-choked one falls silent. Purely visual — nothing to build, nothing to fight."
+}

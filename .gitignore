@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+*.zip
+graphics/_preview*.png

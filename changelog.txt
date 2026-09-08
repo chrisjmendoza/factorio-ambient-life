@@ -1,0 +1,20 @@
+---------------------------------------------------------------------------------------------------
+Version: 0.1.1
+Date: 2026-09-07
+  Bugfixes:
+    - Fixed a crash on load caused by registering a nonexistent on_player_teleported event.
+  Changes:
+    - Birds and butterflies are drawn roughly twice as large; at the old size a bird was half a tile across.
+    - Lightened bird colouring so they are not lost against dark forest.
+  Features:
+    - Added /al-debug, which reports the tree count, pollution, vitality score and per-kind population targets where you stand.
+    - Added /al-here, which spawns creatures beside you to check visibility independently of the spawning rules.
+---------------------------------------------------------------------------------------------------
+Version: 0.1.0
+Date: 2026-09-07
+  Features:
+    - Birds, butterflies and fireflies that appear based on the trees and pollution around each player.
+    - Butterflies are the most sensitive to pollution, so they thin out first as a factory grows.
+    - Fireflies come out after dark and blink; birds and butterflies keep to daylight.
+    - Wildlife is drawn rather than spawned as entities, so it cannot be shot, mined, or collide with a build.
+    - Settings for each creature type, a per-player creature budget, an overall density scale, and the pollution level that drives life away.
