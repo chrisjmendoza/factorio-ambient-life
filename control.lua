@@ -12,6 +12,8 @@ local SPAWN_MIN = 12 -- creatures appear no nearer to the player than this
 local SPAWN_MAX = 34
 local CULL_RADIUS = 50 -- ...and are dropped once they drift beyond it
 local SPAWN_BURST = 3 -- new creatures per kind per sample, so flocks build up
+local ANCHOR_TRIES = 6 -- attempts to find a tree far enough from the player
+local SHADOW_OFFSET = {1.6, 1.9} -- how far a bird's shadow trails it, in tiles
 
 -- Per-kind behaviour. `share` is the slice of the creature budget a kind may
 -- claim; `picky` raises a kind's sensitivity to a degraded landscape by
@@ -25,10 +27,12 @@ local KINDS = {
 		lifetime = {900, 1800},
 		speed = {0.055, 0.095},
 		scale = {1.5, 2.0},
+		anchor = 14, -- birds range widest, so they only loosely follow the trees
+		shadow = true,
 		tints = {
-			{r = 0.22, g = 0.20, b = 0.23},
-			{r = 0.32, g = 0.27, b = 0.23},
-			{r = 0.17, g = 0.18, b = 0.22},
+			{r = 0.42, g = 0.38, b = 0.36},
+			{r = 0.52, g = 0.44, b = 0.35},
+			{r = 0.36, g = 0.36, b = 0.42},
 		},
 	},
 	butterfly = {
@@ -39,6 +43,7 @@ local KINDS = {
 		lifetime = {600, 1500},
 		speed = {0.018, 0.038},
 		scale = {0.9, 1.3},
+		anchor = 5,
 		tints = {
 			{r = 0.98, g = 0.82, b = 0.30},
 			{r = 0.92, g = 0.55, b = 0.22},
@@ -55,6 +60,7 @@ local KINDS = {
 		lifetime = {900, 2100},
 		speed = {0.008, 0.020},
 		scale = {0.55, 0.95},
+		anchor = 4,
 		tints = {
 			{r = 0.85, g = 0.95, b = 0.35},
 			{r = 0.95, g = 0.90, b = 0.45},
@@ -113,16 +119,47 @@ local function light_factors(surface)
 	return day, night
 end
 
-local function spawn(player, kind_name, kind)
-	local surface = player.surface
+-- Where a creature of this kind should appear.
+--
+-- Scoring the land around the player says how much life the area deserves, but
+-- says nothing about where to put it, so creatures used to drift over bare
+-- rock and concrete. Anchoring each one to a real tree keeps wildlife where
+-- there is something to live on. Creatures still have to appear far enough
+-- from the player not to pop into view, so a few trees are tried before
+-- giving up and letting the next sample try again.
+local function spawn_position(player, kind, trees)
+	local origin = player.position
+
+	if kind.anchor and trees and #trees > 0 then
+		for _ = 1, ANCHOR_TRIES do
+			local tree = trees[math.random(#trees)]
+			if tree.valid then
+				local x = tree.position.x + (math.random() - 0.5) * 2 * kind.anchor
+				local y = tree.position.y + (math.random() - 0.5) * 2 * kind.anchor
+				local dx, dy = x - origin.x, y - origin.y
+				if dx * dx + dy * dy >= SPAWN_MIN * SPAWN_MIN then
+					return x, y
+				end
+			end
+		end
+		return nil
+	end
+
 	local angle = math.random() * 2 * math.pi
 	local distance = between(SPAWN_MIN, SPAWN_MAX)
-	local origin = player.position
+	return origin.x + math.cos(angle) * distance, origin.y + math.sin(angle) * distance
+end
+
+local function spawn(player, kind_name, kind, trees)
+	local surface = player.surface
+
+	local x, y = spawn_position(player, kind, trees)
+	if not x then return nil end
 
 	local critter = {
 		kind = kind_name,
-		x = origin.x + math.cos(angle) * distance,
-		y = origin.y + math.sin(angle) * distance,
+		x = x,
+		y = y,
 		heading = math.random() * 2 * math.pi,
 		speed = between(kind.speed[1], kind.speed[2]),
 		phase = math.random() * 2 * math.pi,
@@ -131,6 +168,8 @@ local function spawn(player, kind_name, kind)
 
 	local scale = between(kind.scale[1], kind.scale[2])
 	local tint = pick(kind.tints)
+	local frame_offset = math.random(0, 3)
+	local flap = between(0.25, 0.6)
 	local target = {critter.x, critter.y}
 
 	if kind_name == "firefly" then
@@ -157,11 +196,30 @@ local function spawn(player, kind_name, kind)
 			tint = tint,
 			x_scale = scale,
 			y_scale = scale,
-			animation_speed = between(0.25, 0.6),
-			animation_offset = math.random(0, 3),
+			animation_speed = flap,
+			animation_offset = frame_offset,
 			render_layer = "air-object",
 			time_to_live = critter.life + 60,
 		}
+
+		if kind.shadow then
+			-- Without a shadow a dark shape in a top-down game reads as
+			-- something lying on the ground rather than flying over it. The
+			-- offset copy below is what makes a bird look airborne.
+			critter.shadow = rendering.draw_animation{
+				animation = "ambientlife-" .. kind_name,
+				target = {critter.x + SHADOW_OFFSET[1], critter.y + SHADOW_OFFSET[2]},
+				surface = surface,
+				players = {player},
+				tint = {r = 0, g = 0, b = 0, a = 0.32},
+				x_scale = scale * 0.85,
+				y_scale = scale * 0.85,
+				animation_speed = flap,
+				animation_offset = frame_offset,
+				render_layer = "object",
+				time_to_live = critter.life + 60,
+			}
+		end
 	end
 
 	return critter
@@ -198,6 +256,9 @@ local function retire(critter)
 	if critter.object and critter.object.valid then
 		critter.object.destroy()
 	end
+	if critter.shadow and critter.shadow.valid then
+		critter.shadow.destroy()
+	end
 end
 
 -- Re-scores a player's surroundings and tops their flock up toward the target
@@ -228,6 +289,19 @@ local function resample(player)
 		counts[critter.kind] = (counts[critter.kind] or 0) + 1
 	end
 
+	local anchors
+	local function anchor_trees()
+		if not anchors then
+			anchors = surface.find_entities_filtered{
+				position = player.position,
+				radius = SPAWN_MAX,
+				type = "tree",
+				limit = 60,
+			}
+		end
+		return anchors
+	end
+
 	for kind_name, kind in pairs(KINDS) do
 		if settings.global[kind.setting].value then
 			local daylight = kind.nocturnal and night or day
@@ -240,7 +314,13 @@ local function resample(player)
 				-- budget, which is the one number players are promised is a
 				-- hard limit.
 				if #flock >= budget then break end
-				flock[#flock + 1] = spawn(player, kind_name, kind)
+				-- No usable anchor nearby just means no creature this pass;
+				-- the next sample two seconds later tries again.
+				local critter = spawn(player, kind_name, kind,
+					kind.anchor and anchor_trees() or nil)
+				if critter then
+					flock[#flock + 1] = critter
+				end
 			end
 		end
 	end
@@ -281,6 +361,12 @@ script.on_event(defines.events.on_tick, function()
 			else
 				advance(critter)
 				critter.object.target = {critter.x, critter.y}
+				if critter.shadow and critter.shadow.valid then
+					critter.shadow.target = {
+						critter.x + SHADOW_OFFSET[1],
+						critter.y + SHADOW_OFFSET[2],
+					}
+				end
 			end
 		end
 	end
@@ -359,11 +445,19 @@ commands.add_command("al-here", "Spawn Ambient Life creatures beside you for tes
 	for kind_name, kind in pairs(KINDS) do
 		for i = 1, 3 do
 			local critter = spawn(player, kind_name, kind)
-			-- Placed right beside the player so visibility is not in question.
-			critter.x = player.position.x + (i - 2) * 2.5
-			critter.y = player.position.y - 3
-			critter.object.target = {critter.x, critter.y}
-			flock[#flock + 1] = critter
+			if critter then
+				-- Placed right beside the player so visibility is not in question.
+				critter.x = player.position.x + (i - 2) * 2.5
+				critter.y = player.position.y - 3
+				critter.object.target = {critter.x, critter.y}
+				if critter.shadow and critter.shadow.valid then
+					critter.shadow.target = {
+						critter.x + SHADOW_OFFSET[1],
+						critter.y + SHADOW_OFFSET[2],
+					}
+				end
+				flock[#flock + 1] = critter
+			end
 		end
 	end
 

@@ -11,8 +11,8 @@ Every two seconds the mod scores the ground within 40 tiles of each player by
 counting living trees and reading the pollution there, then tops the local
 population up toward that score.
 
-- **Birds.** Dark silhouettes that wheel over wooded ground by day, banking
-  slowly as they cross.
+- **Birds.** They wheel over wooded ground by day, banking slowly as they
+  cross, each casting a shadow on the ground below it.
 - **Butterflies.** Coloured, erratic, daytime. They are the pickiest of the
   three, so they thin out first as pollution creeps in — usually the earliest
   visible sign that a factory is starting to cost something.
@@ -21,6 +21,11 @@ population up toward that score.
 
 Dusk and dawn overlap deliberately: for a few minutes the last butterflies and
 the first fireflies share the air.
+
+Creatures are anchored to real trees rather than scattered at random points
+nearby, so wildlife stays over ground that could plausibly support it.
+Butterflies and fireflies stay within a few tiles of the tree they appear at;
+birds range considerably wider.
 
 ## How it decides
 
@@ -75,7 +80,7 @@ you care about those.
 
 ## Install
 
-Drop `AmbientLife_0.1.1.zip` into `%APPDATA%\Factorio\mods`.
+Drop `AmbientLife_0.1.2.zip` into `%APPDATA%\Factorio\mods`.
 
 ## Quick test
 

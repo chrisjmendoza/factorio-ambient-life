@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 0.1.2
+Date: 2026-09-07
+  Changes:
+    - Wildlife now appears around actual trees instead of at random points near the player. Scoring the land said how much life an area deserved but never said where to put it, so creatures drifted over bare ground and concrete.
+    - Birds are lighter and now cast a shadow. A dark shape with no depth cue reads as something lying on the ground in a top-down view; the offset shadow is what makes them look airborne.
+    - Butterflies and fireflies keep close to the trees they spawn near; birds range more widely.
+---------------------------------------------------------------------------------------------------
 Version: 0.1.1
 Date: 2026-09-07
   Bugfixes:
