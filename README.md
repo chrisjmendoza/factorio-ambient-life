@@ -91,3 +91,7 @@ minute rather than vanishing all at once.
 python tools/make_graphics.py   # regenerate sprites from AmbientLife/tools
 python ../tools/pack.py --deploy AmbientLife
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
