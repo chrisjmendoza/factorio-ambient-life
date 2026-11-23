@@ -1,8 +1,10 @@
 # Ambient Life (AmbientLife)
 
-For Factorio 2.0 / Space Age. Works with or without the Space Age expansion.
+For Factorio 2.1 / Space Age. Works with or without the Space Age expansion.
 Purely cosmetic — it adds no items, recipes or technologies, and changes no
 game balance.
+
+Factorio 2.0 players: use version 0.1.2.
 
 ## What it does
 
